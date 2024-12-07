@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jadwal Sholat Harian</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5em;
+            text-transform: uppercase;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ccc;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        td {
+            background-color: #f9f9f9;
+        }
+        .time-date {
+            margin: 20px 0;
+            font-size: 1.2em;
+            color: #2c3e50;
+        }
+        #city-name {
+            color: red;
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+        select {
+            padding: 10px;
+            font-size: 1em;
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+            border: none;
+        }
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+        }
+        .btn-save {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+        }
+        .notif {
+            padding: 10px;
+            margin-top: 10px;
+            display: none;
+        }
+        .notif-success {
+            background-color: #2ecc71;
+        }
+        .notif-error {
+            background-color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Jadwal Sholat Harian</h1>
+        <div class="time-date" id="time-date">Memuat waktu...</div>
+        <div id="city-name">Memuat kota...</div>
+
+        <!-- Dropdown Kota -->
+        <label for="city-select">Pilih Kota:</label>
+        <select id="city-select">
+            <option value="">-- Pilih Kota --</option>
+        </select>
+        <button class="btn-primary" onclick="fetchJadwalSholat()">Cari Jadwal</button>
+        <button class="btn-danger" onclick="resetJadwalSholat()">Reset</button>
+        <button class="btn-save" onclick="simpanJadwal()">Simpan Jadwal</button>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Sholat</th>
+                    <th>Waktu</th>
+                </tr>
+            </thead>
+            <tbody id="jadwal-sholat">
+                <tr>
+                    <td colspan="2">Memuat data...</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Notifikasi pesan -->
+        <div id="notif" class="notif"></div>
+
+        <!-- Audio -->
+        <audio id="azanAudio" src="https://archive.org/download/azan-1_202412/AZAN1.mp3"></audio>
+        <audio id="audio30Juz" src="https://archive.org/download/30-juzx-2/30Juzx2.mp3" loop></audio>
+    </div>
+
+    <script>
+        const apiKota = "https://api.myquran.com/v2/sholat/kota/semua";
+        const apiJadwal = "https://api.myquran.com/v2/sholat/jadwal/";
+
+        // Update waktu setiap detik
+        function updateTimeAndDate() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = now.toLocaleDateString('id-ID', options);
+            const time = now.toLocaleTimeString('id-ID');
+            document.getElementById("time-date").innerText = `${formattedDate} | ${time}`;
+        }
+        setInterval(updateTimeAndDate, 1000);
+
+        // Load semua kota
+        async function loadKota() {
+            try {
+                const response = await fetch(apiKota);
+                const dataKota = await response.json();
+                const kotaSelect = document.getElementById("city-select");
+
+                dataKota.data.forEach(kota => {
+                    const option = document.createElement("option");
+                    option.value = kota.id;
+                    option.textContent = kota.lokasi;
+                    kotaSelect.appendChild(option);
+                });
+
+                // Jika data tersimpan di LocalStorage, tampilkan kembali
+                const savedCityId = localStorage.getItem("selectedCityId");
+                if (savedCityId) {
+                    kotaSelect.value = savedCityId;
+                    displaySavedJadwal(); // Menampilkan jadwal dari LocalStorage jika ada
+                }
+            } catch (error) {
+                console.error("Gagal mengambil data kota:", error);
+            }
+        }
+
+        // Fetch jadwal sholat dan simpan ke LocalStorage
+        async function fetchJadwalSholat() {
+            const citySelect = document.getElementById("city-select");
+            const cityId = citySelect.value;
+
+            if (!cityId) {
+                alert("Silakan pilih kota terlebih dahulu!");
+                return;
+            }
+
+            // Matikan audio Azan saat mencari kota
+            const azanAudio = document.getElementById("azanAudio");
+            azanAudio.pause();  // Menjaga agar Azan tidak dimainkan saat mencari jadwal
+            azanAudio.currentTime = 0;  // Pastikan audio Azan mulai dari awal
+
+            try {
+                const today = new Date();
+                const tanggal = `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`;
+                const responseJadwal = await fetch(`${apiJadwal}${cityId}/${tanggal}`);
+                const dataJadwal = await responseJadwal.json();
+
+                if (dataJadwal.data && dataJadwal.data.jadwal) {
+                    const jadwal = dataJadwal.data.jadwal;
+
+                    // Tampilkan jadwal sholat
+                    displayJadwal(jadwal, citySelect.options[citySelect.selectedIndex].text);
+
+                    // Matikan audio azan dan mainkan 30 Juz
+                    const audio30Juz = document.getElementById("audio30Juz");
+                    audio30Juz.play();  // Play Quran audio (looping)
+
+                    // Cek waktu azan dan putar azan jika waktunya tiba
+                    const currentTime = new Date().toLocaleTimeString('id-ID');
+                    if (currentTime === jadwal.subuh) {
+                        playAzan();
+                    } else if (currentTime === jadwal.dzuhur) {
+                        playAzan();
+                    } else if (currentTime === jadwal.ashar) {
+                        playAzan();
+                    } else if (currentTime === jadwal.maghrib) {
+                        playAzan();
+                    } else if (currentTime === jadwal.isya) {
+                        playAzan();
+                    }
+                } else {
+                    alert("Data jadwal sholat tidak ditemukan.");
+                }
+            } catch (error) {
+                console.error("Gagal mengambil data jadwal:", error);
+            }
+        }
+
+        // Fungsi untuk memulai azan
+        function playAzan() {
+            audio30Juz.pause();  // Pause 30 Juz ketika azan dimulai
+            azanAudio.play();    // Mainkan audio azan
+
+            azanAudio.onended = function() {
+                audio30Juz.play();  // Setelah azan selesai, lanjutkan audio 30 Juz
+            };
+        }
+
+        // Tampilkan jadwal sholat
+        function displayJadwal(jadwal, cityName) {
+            const jadwalTable = document.getElementById("jadwal-sholat");
+            jadwalTable.innerHTML = ` 
+                <tr><td>Subuh</td><td>${jadwal.subuh}</td></tr>
+                <tr><td>Dzuhur</td><td>${jadwal.dzuhur}</td></tr>
+                <tr><td>Ashar</td><td>${jadwal.ashar}</td></tr>
+                <tr><td>Maghrib</td><td>${jadwal.maghrib}</td></tr>
+                <tr><td>Isya</td><td>${jadwal.isya}</td></tr>
+            `;
+            document.getElementById("city-name").innerText = `Jadwal untuk kota: ${cityName}`;
+            
+            // Simpan jadwal ke localStorage
+            localStorage.setItem("jadwalSholat", JSON.stringify(jadwal));
+            localStorage.setItem("selectedCityId", cityName);
+        }
+
+        // Simpan jadwal sholat yang ditampilkan
+        function simpanJadwal() {
+            const jadwal = JSON.parse(localStorage.getItem("jadwalSholat"));
+            const notif = document.getElementById("notif");
+
+            if (jadwal) {
+                // Menampilkan notifikasi berhasil
+                notif.classList.add("notif-success");
+                notif.classList.remove("notif-error");
+                notif.innerText = "Jadwal sholat telah berhasil disimpan!";
+                notif.style.display = "block";
+            } else {
+                // Menampilkan notifikasi gagal
+                notif.classList.add("notif-error");
+                notif.classList.remove("notif-success");
+                notif.innerText = "Tidak ada jadwal sholat yang disimpan.";
+                notif.style.display = "block";
+            }
+        }
+
+        // Reset jadwal sholat
+        function resetJadwalSholat() {
+            localStorage.removeItem("jadwalSholat");
+            localStorage.removeItem("selectedCityId");
+            document.getElementById("city-name").innerText = "Memuat kota...";
+            document.getElementById("jadwal-sholat").innerHTML = ` 
+                <tr><td colspan="2">Memuat data...</td></tr>
+            `;
+            // Reset notifikasi
+            const notif = document.getElementById("notif");
+            notif.style.display = "none";
+        }
+
+        // Load data saat halaman dimuat
+        loadKota();
+    </script>
+</body>
+</html>
