@@ -121,10 +121,7 @@
 
         <!-- Audio -->
         <audio id="azanAudio" src="https://archive.org/download/azan3/azan3.mp3"></audio>
-        <audio id="audio30Juz" src="https://archive.org/download/30-juzx-2/30Juzx2.mp3" loop></audio>
-
-        <!-- Tombol Autoplay (tidak terlihat) -->
-        <button id="autoplay-btn" style="display:none;" onclick="autoplayQuran()">Autoplay</button>
+        <audio id="audio30Juz" src="https://archive.org/download/30-juzx-2/30Juzx2.mp3" autoplay></audio>
     </div>
 
     <script>
@@ -155,12 +152,15 @@
                     kotaSelect.appendChild(option);
                 });
 
-                // Jika data tersimpan di LocalStorage, tampilkan kembali
+                // Jika ada kota yang disimpan di LocalStorage, pilih kota tersebut
                 const savedCityId = localStorage.getItem("selectedCityId");
                 if (savedCityId) {
                     kotaSelect.value = savedCityId;
-                    displaySavedJadwal(); // Menampilkan jadwal dari LocalStorage jika ada
+                    fetchJadwalSholat(); // Otomatis klik tombol Cari Jadwal
                 }
+
+                // Jika data tersimpan di LocalStorage, tampilkan kembali
+                displaySavedJadwal(); // Menampilkan jadwal dari LocalStorage jika ada
             } catch (error) {
                 console.error("Gagal mengambil data kota:", error);
             }
@@ -168,11 +168,16 @@
 
         // Fungsi untuk memuat jadwal sholat dari LocalStorage
         function displaySavedJadwal() {
-            const savedJadwal = JSON.parse(localStorage.getItem("jadwalSholat"));
-            const savedCityId = localStorage.getItem("selectedCityId");
+            const savedData = JSON.parse(localStorage.getItem("savedData"));
+            
+            if (savedData) {
+                const savedCityName = savedData.cityName;
+                const savedJadwal = savedData.jadwal;
 
-            if (savedJadwal && savedCityId) {
-                displayJadwal(savedJadwal, savedCityId);  // Menampilkan jadwal yang disimpan
+                if (savedCityName && savedJadwal) {
+                    // Menampilkan jadwal dan kota yang disimpan
+                    displayJadwal(savedJadwal, savedCityName);
+                }
             }
         }
 
@@ -185,6 +190,9 @@
                 alert("Silakan pilih kota terlebih dahulu!");
                 return;
             }
+
+            // Simpan kota yang dipilih di LocalStorage
+            localStorage.setItem("selectedCityId", cityId);
 
             // Matikan audio Azan saat mencari kota
             const azanAudio = document.getElementById("azanAudio");
@@ -202,6 +210,9 @@
 
                     // Tampilkan jadwal sholat
                     displayJadwal(jadwal, citySelect.options[citySelect.selectedIndex].text);
+
+                    // Simpan data lengkap (jadwal + kota) ke localStorage
+                    saveToLocalStorage(jadwal, citySelect.options[citySelect.selectedIndex].text);
 
                     // Mulai audio Quran (looping) dan manajemen audio Azan
                     manageAudioPlay(jadwal);
@@ -224,18 +235,24 @@
                 <tr><td>Isya</td><td>${jadwal.isya}</td></tr>
             `;
             document.getElementById("city-name").innerText = `Jadwal untuk kota: ${cityName}`;
-            
-            // Simpan jadwal ke localStorage
-            localStorage.setItem("jadwalSholat", JSON.stringify(jadwal));
-            localStorage.setItem("selectedCityId", cityName);
+        }
+
+        // Simpan data (jadwal dan kota) ke localStorage
+        function saveToLocalStorage(jadwal, cityName) {
+            const savedData = {
+                jadwal: jadwal,
+                cityName: cityName
+            };
+
+            localStorage.setItem("savedData", JSON.stringify(savedData));
         }
 
         // Simpan jadwal sholat yang ditampilkan
         function simpanJadwal() {
-            const jadwal = JSON.parse(localStorage.getItem("jadwalSholat"));
+            const savedData = JSON.parse(localStorage.getItem("savedData"));
             const notif = document.getElementById("notif");
 
-            if (jadwal) {
+            if (savedData) {
                 // Menampilkan notifikasi berhasil
                 notif.classList.add("notif-success");
                 notif.classList.remove("notif-error");
@@ -252,8 +269,8 @@
 
         // Reset jadwal sholat
         function resetJadwalSholat() {
-            localStorage.removeItem("jadwalSholat");
-            localStorage.removeItem("selectedCityId");
+            localStorage.removeItem("savedData");
+            localStorage.removeItem("selectedCityId"); // Hapus ID kota yang dipilih
             document.getElementById("city-name").innerText = "Memuat kota...";
             document.getElementById("jadwal-sholat").innerHTML = ` 
                 <tr><td colspan="2">Memuat data...</td></tr>
@@ -268,8 +285,14 @@
             const azanAudio = document.getElementById("azanAudio");
             const audio30Juz = document.getElementById("audio30Juz");
 
-            // Mulai audio Quran (looping) secara otomatis saat halaman dimuat
+            // Mulai audio Quran (looping) secara otomatis saat halaman dimuat dengan muted
             audio30Juz.play();
+            audio30Juz.muted = true; // Audio dimulai dalam keadaan mute
+
+            // Unmute audio Quran setelah 1 detik
+            setTimeout(() => {
+                audio30Juz.muted = false; // Unmute audio setelah 1 detik
+            }, 1000);
 
             // Jadwal waktu sholat
             const waktuSholat = [
@@ -297,22 +320,6 @@
                 }
             }, 1000); // Interval setiap 1 detik
         }
-
-        // Fungsi untuk autoplay audio Quran
-        function autoplayQuran() {
-            const audio30Juz = document.getElementById("audio30Juz");
-            audio30Juz.play(); // Memulai pemutaran audio Quran
-        }
-
-        // Simulasi klik tombol autoplay saat halaman dimuat
-        window.onload = function() {
-            document.getElementById("autoplay-btn").click(); // Klik tombol autoplay saat halaman dimuat
-        };
-
-        // Menggunakan event sebelum halaman ditutup atau direfresh
-        window.onbeforeunload = function() {
-            document.getElementById("autoplay-btn").click(); // Klik tombol autoplay sebelum halaman ditutup atau direfresh
-        };
 
         // Load data saat halaman dimuat
         loadKota();
