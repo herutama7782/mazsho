@@ -120,8 +120,11 @@
         <div id="notif" class="notif"></div>
 
         <!-- Audio -->
-        <audio id="azanAudio" src="https://archive.org/download/azan-1_202412/AZAN1.mp3"></audio>
+        <audio id="azanAudio" src="https://archive.org/download/azan3/azan3.mp3"></audio>
         <audio id="audio30Juz" src="https://archive.org/download/30-juzx-2/30Juzx2.mp3" loop></audio>
+
+        <!-- Tombol Autoplay (tidak terlihat) -->
+        <button id="autoplay-btn" style="display:none;" onclick="autoplayQuran()">Autoplay</button>
     </div>
 
     <script>
@@ -163,6 +166,16 @@
             }
         }
 
+        // Fungsi untuk memuat jadwal sholat dari LocalStorage
+        function displaySavedJadwal() {
+            const savedJadwal = JSON.parse(localStorage.getItem("jadwalSholat"));
+            const savedCityId = localStorage.getItem("selectedCityId");
+
+            if (savedJadwal && savedCityId) {
+                displayJadwal(savedJadwal, savedCityId);  // Menampilkan jadwal yang disimpan
+            }
+        }
+
         // Fetch jadwal sholat dan simpan ke LocalStorage
         async function fetchJadwalSholat() {
             const citySelect = document.getElementById("city-select");
@@ -190,39 +203,14 @@
                     // Tampilkan jadwal sholat
                     displayJadwal(jadwal, citySelect.options[citySelect.selectedIndex].text);
 
-                    // Matikan audio azan dan mainkan 30 Juz
-                    const audio30Juz = document.getElementById("audio30Juz");
-                    audio30Juz.play();  // Play Quran audio (looping)
-
-                    // Cek waktu azan dan putar azan jika waktunya tiba
-                    const currentTime = new Date().toLocaleTimeString('id-ID');
-                    if (currentTime === jadwal.subuh) {
-                        playAzan();
-                    } else if (currentTime === jadwal.dzuhur) {
-                        playAzan();
-                    } else if (currentTime === jadwal.ashar) {
-                        playAzan();
-                    } else if (currentTime === jadwal.maghrib) {
-                        playAzan();
-                    } else if (currentTime === jadwal.isya) {
-                        playAzan();
-                    }
+                    // Mulai audio Quran (looping) dan manajemen audio Azan
+                    manageAudioPlay(jadwal);
                 } else {
                     alert("Data jadwal sholat tidak ditemukan.");
                 }
             } catch (error) {
                 console.error("Gagal mengambil data jadwal:", error);
             }
-        }
-
-        // Fungsi untuk memulai azan
-        function playAzan() {
-            audio30Juz.pause();  // Pause 30 Juz ketika azan dimulai
-            azanAudio.play();    // Mainkan audio azan
-
-            azanAudio.onended = function() {
-                audio30Juz.play();  // Setelah azan selesai, lanjutkan audio 30 Juz
-            };
         }
 
         // Tampilkan jadwal sholat
@@ -275,8 +263,60 @@
             notif.style.display = "none";
         }
 
+        // Fungsi untuk mengelola audio Azan dan Quran
+        function manageAudioPlay(jadwal) {
+            const azanAudio = document.getElementById("azanAudio");
+            const audio30Juz = document.getElementById("audio30Juz");
+
+            // Mulai audio Quran (looping) secara otomatis saat halaman dimuat
+            audio30Juz.play();
+
+            // Jadwal waktu sholat
+            const waktuSholat = [
+                jadwal.subuh,
+                jadwal.dzuhur,
+                jadwal.ashar,
+                jadwal.maghrib,
+                jadwal.isya
+            ];
+
+            // Cek waktu setiap detik
+            setInterval(() => {
+                const now = new Date();
+                const currentTime = now.toTimeString().slice(0, 5); // Format waktu "HH:mm"
+
+                if (waktuSholat.includes(currentTime)) {
+                    // Pause audio Quran dan play audio Azan
+                    audio30Juz.pause();
+                    azanAudio.play();
+
+                    // Ketika azan selesai, lanjutkan audio Quran
+                    azanAudio.onended = () => {
+                        audio30Juz.play();
+                    };
+                }
+            }, 1000); // Interval setiap 1 detik
+        }
+
+        // Fungsi untuk autoplay audio Quran
+        function autoplayQuran() {
+            const audio30Juz = document.getElementById("audio30Juz");
+            audio30Juz.play(); // Memulai pemutaran audio Quran
+        }
+
+        // Simulasi klik tombol autoplay saat halaman dimuat
+        window.onload = function() {
+            document.getElementById("autoplay-btn").click(); // Klik tombol autoplay saat halaman dimuat
+        };
+
+        // Menggunakan event sebelum halaman ditutup atau direfresh
+        window.onbeforeunload = function() {
+            document.getElementById("autoplay-btn").click(); // Klik tombol autoplay sebelum halaman ditutup atau direfresh
+        };
+
         // Load data saat halaman dimuat
         loadKota();
+        displaySavedJadwal(); // Memastikan jadwal yang disimpan ditampilkan saat halaman dimuat
     </script>
 </body>
 </html>
