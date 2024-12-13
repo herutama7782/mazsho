@@ -52,12 +52,14 @@
             padding: 10px;
             font-size: 1em;
             margin: 10px 0;
+            width: 100%; /* Agar dropdown mengisi lebar layar */
         }
         button {
             padding: 10px 20px;
             font-size: 1em;
             cursor: pointer;
             margin: 5px;
+            width: 100%; /* Membuat tombol lebih lebar */
         }
         .btn-primary {
             background-color: #3498db;
@@ -84,6 +86,31 @@
         }
         .notif-error {
             background-color: #e74c3c;
+        }
+
+        /* Media Query untuk responsivitas */
+        @media screen and (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            .container {
+                padding: 10px;
+            }
+            select, button {
+                font-size: 0.9em;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            .time-date, #city-name {
+                font-size: 1em;
+            }
+            select, button {
+                font-size: 0.8em;
+            }
         }
     </style>
 </head>
