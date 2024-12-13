@@ -52,14 +52,18 @@
             padding: 10px;
             font-size: 1em;
             margin: 10px 0;
-            width: 100%; /* Agar dropdown mengisi lebar layar */
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
         }
         button {
             padding: 10px 20px;
             font-size: 1em;
             cursor: pointer;
             margin: 5px;
-            width: 100%; /* Membuat tombol lebih lebar */
         }
         .btn-primary {
             background-color: #3498db;
@@ -87,31 +91,6 @@
         .notif-error {
             background-color: #e74c3c;
         }
-
-        /* Media Query untuk responsivitas */
-        @media screen and (max-width: 768px) {
-            h1 {
-                font-size: 2em;
-            }
-            .container {
-                padding: 10px;
-            }
-            select, button {
-                font-size: 0.9em;
-            }
-        }
-
-        @media screen and (max-width: 480px) {
-            h1 {
-                font-size: 1.8em;
-            }
-            .time-date, #city-name {
-                font-size: 1em;
-            }
-            select, button {
-                font-size: 0.8em;
-            }
-        }
     </style>
 </head>
 <body>
@@ -125,9 +104,13 @@
         <select id="city-select">
             <option value="">-- Pilih Kota --</option>
         </select>
-        <button class="btn-primary" onclick="fetchJadwalSholat()">Cari Jadwal</button>
-        <button class="btn-danger" onclick="resetJadwalSholat()">Reset</button>
-        <button class="btn-save" onclick="simpanJadwal()">Simpan Jadwal</button>
+        
+        <!-- Tombol untuk Cari Jadwal, Reset, Simpan Jadwal -->
+        <div class="button-container">
+            <button class="btn-primary" onclick="fetchJadwalSholat()">Cari Jadwal</button>
+            <button class="btn-danger" onclick="resetJadwalSholat()">Reset</button>
+            <button class="btn-save" onclick="simpanJadwal()">Simpan Jadwal</button>
+        </div>
 
         <table>
             <thead>
